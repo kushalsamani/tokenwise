@@ -113,6 +113,29 @@ just says it cannot verify anything. No store ships with this repo.
 | `TOKENWISE_SUBAGENT_MODEL` | `sonnet` | model for subagents spawned without one |
 | `TOKENWISE_DB` | `tokenwise/ledger.db` | ledger location |
 | `TOKENWISE_STORE_DB` / `_CLI` | unset | optional knowledge store |
+| `TOKENWISE_ACCOUNTS` | on | set `0` to stop recording which account a session belongs to |
+
+## It installs per machine, not per Claude account
+
+This surprises everyone, so it is worth saying plainly: **Claude Code hooks live in `~/.claude/settings.json`, which
+is per macOS user.** They apply to every Claude Code session that user starts, whichever Claude account is signed
+in — personal, work, or a second org. Signing out and back in changes nothing. Transcripts carry no account field
+either, so one ledger covers them all.
+
+tokenwise therefore attributes each session to the account that was active when it started (from `oauthAccount` in
+your own `~/.claude.json`) and reports the split:
+
+```
+by account:
+  Acme Corp                sessions=  93 turns=19662 cache_read= 2.0G out=  3.5M
+  gmail                    sessions=  11 turns=  842 cache_read=  38M out=   90K
+```
+
+Nothing leaves your machine, and `TOKENWISE_ACCOUNTS=0` turns the attribution off. One caveat: `~/.claude.json` is
+global, so two sessions on *different* accounts starting at the same moment can be misattributed. Sequential
+switching is accurate.
+
+If you want a hard boundary between two accounts, a separate macOS user account is the only real one.
 
 ## Your data
 

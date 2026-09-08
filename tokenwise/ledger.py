@@ -5,6 +5,9 @@
   ledger.py report [--today|--week|--days N|--session ID] [--no-ingest]
   ledger.py actions [--days N]         what the handlers did and what they estimate they saved
 
+Sessions are attributed to the Claude account that was active when they started, so a machine shared by a personal
+and a work account can see which spent what. See _common.note_account; disable with TOKENWISE_ACCOUNTS=0.
+
 Cost proxy = list price per model (input ×1, cache write ×1.25, cache read ×0.10 — Fable 5.1 cache read $0.25/M,
 output ×5). The weekly-limit percentage is not readable locally; /usage stays the arbiter. This shows the SHAPE:
 context per turn, turns per prompt, which tools inflate results, and what the handlers changed.
@@ -234,6 +237,20 @@ def report(args):
             share = sum(cr for x, cr in crs if lo <= x < hi) / tot_cr
             if n:
                 print(f'  {name:9s} turns={n:5d}  share of cache-read tokens={share:5.0%}')
+    # per-account split: hooks are per macOS user, so one ledger can hold several Claude accounts
+    try:
+        acct = c.execute(
+            'SELECT COALESCE(a.label, "unattributed") lab, COUNT(DISTINCT t.session_id) s, COUNT(*) n, '
+            'SUM(t.tok_cr) cr, SUM(t.tok_out) o FROM turns t '
+            'LEFT JOIN session_accounts a ON a.session_id = t.session_id '
+            'WHERE t.ts BETWEEN ? AND ? GROUP BY lab ORDER BY cr DESC', (a, b)).fetchall()
+    except Exception:
+        acct = []
+    if len(acct) > 1 or (acct and acct[0]['lab'] != 'unattributed'):
+        print('by account:')
+        for r in acct:
+            print(f"  {r['lab'][:24]:24s} sessions={r['s']:4d} turns={r['n']:5d} "
+                  f"cache_read={_fmt(r['cr'] or 0):>7s} out={_fmt(r['o'] or 0):>6s}")
     print('by model:')
     for m, cnt in sorted(by_model.items(), key=lambda kv: -kv[1]['tok_cr']):
         print(f"  {m:24s} turns={cnt['turns']:5d} cache_read={_fmt(cnt['tok_cr']):>7s} out={_fmt(cnt['tok_out']):>6s}")

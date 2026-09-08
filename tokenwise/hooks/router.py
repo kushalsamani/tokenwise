@@ -58,6 +58,7 @@ def main():
     if C.disabled():
         return
     d = C.read_stdin()
+    C.note_account(d.get('session_id'))     # cheap, once per session; see _common.note_account
     prompt = d.get('prompt') or ''
     if d.get('source') == 'slash_command' or prompt.lstrip().startswith('/') or not prompt.strip():
         return

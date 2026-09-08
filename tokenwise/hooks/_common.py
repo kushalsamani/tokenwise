@@ -70,6 +70,42 @@ def meta_set(key, value):
         pass
 
 
+CLAUDE_CONFIG = os.path.expanduser('~/.claude.json')
+
+
+def note_account(session_id):
+    """Record which Claude account a session belongs to, once per session.
+
+    Claude Code hooks are per macOS USER, not per Claude account: one settings file, one transcript tree, one
+    ledger, shared by every account signed in on the machine. Without this the report cannot tell you which
+    account spent what -- personal and work usage arrive as one undifferentiated pile.
+
+    Reads only ~/.claude.json (your own local config, already on disk) and writes the label into your own local
+    ledger. Nothing is transmitted anywhere. Turn it off with TOKENWISE_ACCOUNTS=0.
+    """
+    if not session_id or os.environ.get('TOKENWISE_ACCOUNTS') == '0':
+        return
+    try:
+        con = _con()
+        con.execute('CREATE TABLE IF NOT EXISTS session_accounts (session_id TEXT PRIMARY KEY, email TEXT, '
+                    'account_uuid TEXT, label TEXT, seen TEXT)')
+        if con.execute('SELECT 1 FROM session_accounts WHERE session_id=?', (session_id,)).fetchone():
+            con.close()
+            return
+        with open(CLAUDE_CONFIG) as fh:
+            acc = (json.load(fh) or {}).get('oauthAccount') or {}
+        email = acc.get('emailAddress')
+        org = (acc.get('organizationName') or '').strip()
+        label = org or (email or 'unknown').split('@')[-1].split('.')[0]
+        con.execute('INSERT OR IGNORE INTO session_accounts(session_id, email, account_uuid, label, seen) '
+                    'VALUES (?,?,?,?,?)',
+                    (session_id, email, acc.get('accountUuid'), label, time.strftime('%Y-%m-%dT%H:%M:%S')))
+        con.commit()
+        con.close()
+    except Exception:
+        pass
+
+
 def debug(msg):
     if os.environ.get('TOKENWISE_DEBUG'):
         with open(os.path.join(ROOT, 'hooks.debug.log'), 'a') as fh:
