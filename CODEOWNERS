@@ -1,0 +1,8 @@
+# The security boundary. Changes here need the owner's review, always.
+/audit.py            @kushal
+/tools/              @kushal
+/install.sh          @kushal
+/uninstall.sh        @kushal
+/.github/            @kushal
+/MANIFEST.sha256     @kushal
+/SECURITY.md         @kushal

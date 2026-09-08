@@ -1,0 +1,44 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read          # a PR must never be able to write to the repo
+
+jobs:
+  audit:
+    name: security audit (blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      # The audit runs against the PR's own code, so a PR that adds a forbidden construct fails here.
+      # It cannot be skipped: a PR that edits audit.py to weaken it is visible in the diff and owned by CODEOWNERS.
+      - name: static safety audit
+        run: python3 audit.py --path .
+      - name: manifest matches the tree
+        run: python3 audit.py --path . --manifest --quiet
+
+  tests:
+    name: hook behaviour
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: python3 -m unittest discover -s tests -v
+
+  install:
+    name: clean-machine install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      # proves the installer works with no pre-existing settings.json, no knowledge store and no personal paths
+      - run: ./install.sh
+      - run: test -s "$HOME/.claude/settings.json" && python3 -c "import json,os;json.load(open(os.path.expanduser('~/.claude/settings.json')))"
+      - run: ./uninstall.sh

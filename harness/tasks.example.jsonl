@@ -1,0 +1,4 @@
+# Copy to tasks.jsonl (gitignored). One real task per line from YOUR repos, with a check that proves the
+# answer was right. $OUT is a file holding the model's reply.
+{"id": "t1-symbol", "cwd": "~/your/repo", "prompt": "Where is the FooBar class defined? Reply with the file path and line only.", "check": "grep -q 'FooBar' \"$OUT\""}
+{"id": "t2-explain", "cwd": "~/your/repo", "prompt": "Explain in one paragraph what module X is for.", "check": "test $(wc -w < \"$OUT\") -gt 40"}

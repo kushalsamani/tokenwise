@@ -1,0 +1,3 @@
+# One repo path per line. `whereis.py build` indexes these.
+# Copy to repos.txt (gitignored) and edit.
+/path/to/your/repo

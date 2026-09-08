@@ -1,0 +1,15 @@
+# local state and personal data - never committed
+*.db
+*.db-wal
+*.db-shm
+repos.txt
+harness/tasks.jsonl
+harness/results.tsv
+harness/last-run.log
+hooks.debug.log
+ledger-errors.log
+__pycache__/
+*.pyc
+.DS_Store
+*.bak
+*.bak-*
