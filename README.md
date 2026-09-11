@@ -8,14 +8,28 @@ knows it learns from the transcripts Claude Code already writes on your own mach
 
 **It never changes your model, your context window, or your permissions.**
 
+macOS and Linux:
+
 ```bash
 git clone <your-fork-or-this-repo> ~/Projects/tokenwise
 cd ~/Projects/tokenwise
 ./install.sh            # audits itself, then wires the hooks. Nothing to choose.
 ```
 
-Hooks take effect in new Claude Code sessions. `./uninstall.sh` reverses everything. `TOKENWISE_OFF=1` disables
-every handler without uninstalling.
+Windows:
+
+```powershell
+git clone <your-fork-or-this-repo> $HOME\.claude-tools\tokenwise
+cd $HOME\.claude-tools\tokenwise
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+Same five steps either way, and the same audit gate. Everything that differs between the three platforms is
+detected at run time, so one checkout serves all of them: the desktop notification, the hook command form, and
+the console encoding. See [Windows](#windows) below for what is different and why.
+
+Hooks take effect in new Claude Code sessions. `./uninstall.sh` or `.\uninstall.ps1` reverses everything.
+`TOKENWISE_OFF=1` disables every handler without uninstalling.
 
 ---
 
@@ -98,8 +112,16 @@ unchanged behaviour the saving is a couple of percent.
 ## Optional: a knowledge store
 
 `task_boundary` is more useful if it can verify that finished work is written down somewhere before suggesting you
-clear. It looks for a store via `TOKENWISE_STORE_DB` and `TOKENWISE_STORE_CLI`. Without them it still fires — it
-just says it cannot verify anything. No store ships with this repo.
+clear. Two stores are understood, in order.
+
+1. A knowledge store of your own, named by `TOKENWISE_STORE_DB` and `TOKENWISE_STORE_CLI`. None ships with this
+   repo.
+2. Failing that, the memory notes Claude Code already keeps for the project under
+   `~/.claude/projects/<project>/memory/`. Nothing to configure: the handler counts the notes in `MEMORY.md`,
+   checks whether any were written recently, and says so. Those notes are exactly what a fresh session loads on
+   its own, which is what makes "clearing costs you nothing" a checkable claim rather than a hopeful one.
+
+With neither, it still fires and says plainly that it verified nothing.
 
 ## Configuration
 
@@ -114,6 +136,17 @@ just says it cannot verify anything. No store ships with this repo.
 | `TOKENWISE_DB` | `tokenwise/ledger.db` | ledger location |
 | `TOKENWISE_STORE_DB` / `_CLI` | unset | optional knowledge store |
 | `TOKENWISE_ACCOUNTS` | on | set `0` to stop recording which account a session belongs to |
+| `TOKENWISE_BOUNDARY_COOLDOWN` | `60` | turns to wait before a second boundary alert in one session |
+| `TOKENWISE_NOTIFY` | on | set `0` for no desktop notification; the on-screen line still appears |
+
+Every one of these can also live in `config.local.json` at the repo root, which is gitignored and read when the
+variable is not set. That matters most on Windows, where a hook is launched by the Claude Code process and
+inherits its environment rather than your shell's:
+
+```json
+{ "TOKENWISE_CTX_THRESHOLDS": "400000,600000,800000,900000",
+  "TOKENWISE_BOUNDARY_COOLDOWN": "60" }
+```
 
 ## It installs per machine, not per Claude account
 
@@ -143,10 +176,28 @@ The ledger and symbol index are built from your own transcripts, on your machine
 database, no repo list, no harness task and no result file is ever committed. Nothing is uploaded anywhere. If you
 fork this, check `git status` before your first push anyway.
 
+## Windows
+
+The hooks, the ledger and the symbol index are the same code on every platform. Three things cannot be:
+
+| | macOS | Linux | Windows |
+|---|---|---|---|
+| notification | `osascript` | `notify-send` if present | a toast via `tokenwise/notify.ps1`, hashed in the manifest like every other wired file |
+| hook command | `/usr/bin/env python3 "<hook>"` | same | `{"command": "<python.exe>", "args": ["<hook>"]}` |
+| console | already UTF-8 | already UTF-8 | stdout is reconfigured, or the reports die on a legacy code page |
+
+The hook command is the one that bites. There is no `/usr/bin/env` on Windows; `python3` is usually a Microsoft
+Store stub that prints "Python was not found" and exits 0, which Claude Code would then inject into your context
+on **every prompt**; and the command may be handed to PowerShell, where a quoted path at the start of a line is a
+string literal rather than a program. So `install.ps1` wires the exec form instead, with the absolute interpreter
+it verified, and no shell is involved at all.
+
+`install.ps1` refuses to run from an elevated shell, for the same reason `install.sh` refuses root.
+
 ## Requirements
 
-macOS or Linux, Python 3.9+ (stdlib only), Claude Code. The desktop notification uses `osascript` on macOS and is
-skipped silently elsewhere.
+macOS, Linux or Windows 10/11. Python 3.9+ (stdlib only) and Claude Code. On Windows use the real python.org
+interpreter, not the Microsoft Store alias; `install.ps1` checks and refuses the stub.
 
 ## Licence
 

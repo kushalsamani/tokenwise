@@ -12,7 +12,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _common as C  # noqa: E402
 
-THRESHOLDS = [int(x) for x in os.environ.get('TOKENWISE_CTX_THRESHOLDS', '150000,300000,450000').split(',')]
+THRESHOLDS = [int(x) for x in C.setting('TOKENWISE_CTX_THRESHOLDS', '150000,300000,450000').split(',')]
 TAIL_BYTES = 400_000
 
 

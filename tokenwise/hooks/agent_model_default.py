@@ -8,7 +8,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _common as C  # noqa: E402
 
-DEFAULT = os.environ.get('TOKENWISE_SUBAGENT_MODEL', 'sonnet')
+DEFAULT = C.setting('TOKENWISE_SUBAGENT_MODEL', 'sonnet')
 
 
 def main():

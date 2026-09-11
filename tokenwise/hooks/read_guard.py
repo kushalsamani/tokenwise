@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _common as C  # noqa: E402
 
-CAP = int(os.environ.get('TOKENWISE_READ_CAP', '600'))
+CAP = int(C.setting('TOKENWISE_READ_CAP', '600'))
 SKIP_EXT = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.pdf', '.ipynb', '.svg', '.ico', '.mov', '.mp4', '.zip', '.gz', '.jar', '.class'}
 
 

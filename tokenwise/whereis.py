@@ -13,8 +13,16 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(ROOT, 'hooks'))
+import _common as C  # noqa: E402
+
 DB = os.path.join(ROOT, 'symbols.db')
-REPOS_FILE = os.path.join(ROOT, 'repos.txt')
+# The installer writes repos.txt at the checkout root, next to install.sh, and the README points there. Reading it
+# from the package directory instead meant `build` fell through to indexing the current working directory: you got
+# a handful of symbols from wherever you happened to be standing, and no error to say so. Both places are accepted.
+REPOS_FILE = os.path.join(os.path.dirname(ROOT), 'repos.txt')
+if not os.path.exists(REPOS_FILE) and os.path.exists(os.path.join(ROOT, 'repos.txt')):
+    REPOS_FILE = os.path.join(ROOT, 'repos.txt')
 SKIP_DIRS = {'.git', 'node_modules', 'target', 'build', 'dist', '.venv', 'venv', '.next', '.claude', 'out', 'coverage',
              '__pycache__', '.idea', '.gradle', 'logs'}
 
@@ -153,6 +161,7 @@ def default_repos():
 
 
 if __name__ == '__main__':
+    C.utf8_stdout()
     a = sys.argv[1:]
     if not a or a[0] in ('-h', '--help'):
         print(__doc__)
