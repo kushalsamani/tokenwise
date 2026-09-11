@@ -24,7 +24,10 @@ import time
 from collections import Counter, defaultdict
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-DB = os.environ.get('TOKENWISE_DB', os.path.join(ROOT, 'ledger.db'))
+sys.path.insert(0, os.path.join(ROOT, 'hooks'))
+import _common as C  # noqa: E402  the hooks' settings and platform helpers; stdlib only, no cycle
+
+DB = C.setting('TOKENWISE_DB', os.path.join(ROOT, 'ledger.db'))
 PROJECTS = os.path.expanduser('~/.claude/projects')
 
 # $ per 1M tokens: (input, output, cache_read) — cache write = input × 1.25
@@ -419,8 +422,14 @@ def replay(args):
     a, b = _window(args)
     reest = args.reestablish
 
-    rc = _sq.connect(os.path.expanduser('~/.claude-tools/recall/recall.db'))
-    rc.row_factory = _sq.Row
+    store = C.setting('TOKENWISE_STORE_DB', '')
+    rc = None
+    if store and os.path.exists(store):
+        try:
+            rc = _sq.connect(store)
+            rc.row_factory = _sq.Row
+        except Exception:
+            rc = None
 
     turns = c.execute('SELECT session_id, ts, ctx FROM turns WHERE ts BETWEEN ? AND ? AND is_subagent=0 '
                       'ORDER BY session_id, ts', (a, b)).fetchall()
@@ -435,9 +444,15 @@ def replay(args):
     for sid, series in by_sess.items():
         if len(series) < TB.MIN_TURNS:
             continue
-        prompts = rc.execute("SELECT ts, text FROM chunks WHERE session_id=? AND role='user' ORDER BY ts",
-                             (sid,)).fetchall()
+        prompts = []
+        if rc is not None:
+            try:
+                prompts = rc.execute("SELECT ts, text FROM chunks WHERE session_id=? AND role='user' ORDER BY ts",
+                                     (sid,)).fetchall()
+            except Exception:
+                prompts = []
         if not prompts:
+            # the ledger's own prompts, truncated to 120 chars: a cruder overlap, same classifier
             prompts = c.execute('SELECT ts, head AS text FROM prompts WHERE session_id=? ORDER BY ts', (sid,)).fetchall()
         if not prompts:
             continue
@@ -477,7 +492,8 @@ def replay(args):
             if per_split[k] > 0:
                 fires.append((per_split[k], sid, k, len(series), series[k - 1][1], len(series) - k, 0.0))
         saved_total += sess_saved
-    rc.close()
+    if rc is not None:
+        rc.close()
 
     print('# tokenwise replay -- task_boundary against history, %sZ -> %sZ' % (a[:16], b[:16]))
     print('classifier: >=%d turns and <=%.0f%% word overlap with the last %d prompts, %d-turn cooldown'
@@ -504,6 +520,7 @@ def actions(args):
 
 
 def main():
+    C.utf8_stdout()
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = p.add_subparsers(dest='cmd', required=True)
     s = sp.add_parser('ingest'); s.add_argument('-v', action='store_true')

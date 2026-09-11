@@ -3,8 +3,8 @@ name: where-is
 description: Find where a symbol (class, method, function, type, table, enum) is defined without reading files - returns file:line from a local index. Use for "where is X defined", "which file has Y", "find the definition of Z", or before reading a file to locate one symbol.
 ---
 ```
-{{TOKENWISE}}/tokenwise/whereis.py <Name> [--repo <repo basename>] [--kind class|method|function|type|table|enum] [--limit 15]
-{{TOKENWISE}}/tokenwise/whereis.py build          # refresh the index (incremental by mtime; ~1 s for two repos)
+{{PY}} "{{TOKENWISE}}/tokenwise/whereis.py" <Name> [--repo <repo basename>] [--kind class|method|function|type|table|enum] [--limit 15]
+{{PY}} "{{TOKENWISE}}/tokenwise/whereis.py" build   # refresh the index (incremental by mtime; ~1 s for two repos)
 ```
 - Exact-name matches come first, then prefix, then substring. Output is `path:line  kind  name`.
 - Then Read ONLY the range you need (offset/limit around that line), not the whole file.

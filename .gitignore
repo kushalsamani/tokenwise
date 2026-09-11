@@ -3,6 +3,7 @@
 *.db-wal
 *.db-shm
 repos.txt
+config.local.json
 harness/tasks.jsonl
 harness/results.tsv
 harness/last-run.log

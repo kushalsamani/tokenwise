@@ -32,7 +32,7 @@ jobs:
       - run: python3 -m unittest discover -s tests -v
 
   install:
-    name: clean-machine install
+    name: clean-machine install (posix)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,3 +42,25 @@ jobs:
       - run: ./install.sh
       - run: test -s "$HOME/.claude/settings.json" && python3 -c "import json,os;json.load(open(os.path.expanduser('~/.claude/settings.json')))"
       - run: ./uninstall.sh
+
+  windows:
+    name: clean-machine install (windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: static safety audit
+        run: python audit.py --path .
+      - name: manifest matches the tree
+        run: python audit.py --path . --manifest --quiet
+      - name: hook behaviour
+        run: python -m unittest discover -s tests -v
+      # -AllowElevated because GitHub's Windows runners are administrators; a real machine is not, and the
+      # installer refuses there for the same reason install.sh refuses root.
+      - name: install
+        run: powershell -ExecutionPolicy Bypass -File .\install.ps1 -AllowElevated
+      - name: the hooks are wired, and settings.json still parses
+        run: python -c "import json,os;d=json.load(open(os.path.expanduser('~/.claude/settings.json')));assert any('/tokenwise/' in json.dumps(v) for v in d['hooks'].values()), d"
+      - name: uninstall
+        run: powershell -ExecutionPolicy Bypass -File .\uninstall.ps1

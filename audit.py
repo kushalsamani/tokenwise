@@ -45,7 +45,10 @@ BANNED_CALLS = {
     'setattr', 'delattr', 'globals', 'locals', 'vars', 'memoryview',
 }
 # Only these programs may be launched, and only through subprocess.run with a literal list.
-ALLOWED_PROGRAMS = {'osascript'}          # sys.executable is allowed separately
+# All three are the desktop notifier, one per platform: osascript (macOS), powershell (Windows, running the
+# hash-checked notify.ps1 and nothing else), notify-send (Linux). sys.executable is allowed separately.
+# Widening this set is the single most load-bearing change a pull request can make to this file.
+ALLOWED_PROGRAMS = {'osascript', 'powershell', 'powershell.exe', 'notify-send'}
 # Strings that betray intent regardless of how they are assembled.
 BANNED_SUBSTRINGS = [
     ('permissiondecision', 'a hook must never make a permission decision: that would auto-approve tool calls '
@@ -170,8 +173,11 @@ def manifest_lines(root):
     lines = []
     for f in files_to_audit(root):
         h = hashlib.sha256(open(f, 'rb').read()).hexdigest()
-        lines.append(f'{h}  {os.path.relpath(f, root)}')
-    for extra in ('install.sh', 'uninstall.sh', 'audit.py', 'harness/run.sh'):
+        # forward slashes always: a manifest written on Windows must verify on Linux and macOS, and
+        # os.path.relpath would otherwise record tokenwise\hooks\_common.py and match nothing there.
+        lines.append(f'{h}  {os.path.relpath(f, root).replace(os.sep, "/")}')
+    for extra in ('install.sh', 'install.ps1', 'uninstall.sh', 'uninstall.ps1', 'audit.py', 'harness/run.sh',
+                  'tokenwise/notify.ps1'):
         p = os.path.join(root, extra)
         if os.path.exists(p):
             lines.append(f'{hashlib.sha256(open(p, "rb").read()).hexdigest()}  {extra}')
@@ -208,7 +214,9 @@ def main():
     if a.write_manifest:
         body = ('# sha256 of every file the installer will wire or execute.\n'
                 '# Regenerate with: python3 audit.py --write-manifest\n' + '\n'.join(manifest_lines(root)) + '\n')
-        open(MANIFEST, 'w').write(body)
+        # newline='' keeps the file LF on Windows too, so the manifest a maintainer regenerates is byte-identical
+        # to the one everyone else has and does not show up as a spurious diff.
+        open(MANIFEST, 'w', encoding='utf-8', newline='').write(body)
         print(f'wrote {MANIFEST} ({len(manifest_lines(root))} files)')
         return 0
 

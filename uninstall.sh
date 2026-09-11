@@ -5,7 +5,9 @@ set -euo pipefail
 SETTINGS="$HOME/.claude/settings.json"
 [ -f "$SETTINGS" ] || { echo "no settings.json; nothing to do"; exit 0; }
 cp "$SETTINGS" "$SETTINGS.bak-tokenwise-uninstall-$(date +%Y%m%d-%H%M%S)"
-python3 - "$SETTINGS" <<'PY'
+PY=python3
+command -v python3 >/dev/null || PY=python
+"$PY" - "$SETTINGS" <<'PY'
 import json, sys
 p = sys.argv[1]; s = json.load(open(p)); hooks = s.get('hooks', {}); n = 0
 for ev, groups in list(hooks.items()):

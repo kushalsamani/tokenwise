@@ -35,10 +35,12 @@ if [ "$(id -u)" = "0" ]; then
   exit 1
 fi
 
-command -v python3 >/dev/null || { echo "python3 is required (stdlib only, no packages)." >&2; exit 1; }
+PY=python3
+command -v python3 >/dev/null || PY=python
+command -v "$PY" >/dev/null || { echo "python3 is required (stdlib only, no packages)." >&2; exit 1; }
 
 echo "==> 1/5  safety audit"
-python3 "$HERE/audit.py" --path "$HERE" $MANIFEST_CHECK || {
+"$PY" "$HERE/audit.py" --path "$HERE" $MANIFEST_CHECK || {
   echo
   echo "Install aborted by the audit. This is the gate that stops a merged pull request from silently wiring"
   echo "code that runs on every prompt. Read the findings above before overriding anything."
@@ -47,14 +49,14 @@ python3 "$HERE/audit.py" --path "$HERE" $MANIFEST_CHECK || {
 
 echo
 echo "==> 2/5  environment"
-echo "    python3: $(python3 --version 2>&1)"
+echo "    python:   $("$PY" --version 2>&1)"
 echo "    settings: $SETTINGS"
 [ -f "$SETTINGS" ] || { mkdir -p "$(dirname "$SETTINGS")"; [ "$DRY" = 1 ] || echo '{}' > "$SETTINGS"; echo "    (created)"; }
 
 if [ "$DRY" = 1 ]; then
   echo
   echo "==> dry run: the hooks below would be wired, and nothing else would change."
-  python3 "$HERE/tools/wire.py" --settings "$SETTINGS" --repo "$HERE" --dry-run
+  "$PY" "$HERE/tools/wire.py" --settings "$SETTINGS" --repo "$HERE" --dry-run
   exit 0
 fi
 
@@ -66,24 +68,24 @@ echo "    $BACKUP"
 
 echo
 echo "==> 4/5  wiring hooks"
-python3 "$HERE/tools/wire.py" --settings "$SETTINGS" --repo "$HERE"
+"$PY" "$HERE/tools/wire.py" --settings "$SETTINGS" --repo "$HERE"
 
 echo
 echo "==> 5/5  skills and local state"
 mkdir -p "$HOME/.claude/skills"
-python3 "$HERE/tools/render_skills.py" "$HERE"
+"$PY" "$HERE/tools/render_skills.py" "$HERE" "$PY"
 chmod +x "$HERE"/tokenwise/hooks/*.py "$HERE"/tokenwise/*.py "$HERE"/harness/run.sh "$HERE"/audit.py 2>/dev/null || true
 [ -f "$HERE/repos.txt" ] || cp "$HERE/repos.txt.example" "$HERE/repos.txt"
-python3 "$HERE/tokenwise/ledger.py" ingest >/dev/null 2>&1 || true
+"$PY" "$HERE/tokenwise/ledger.py" ingest >/dev/null 2>&1 || true
 echo "    ledger: $HERE/tokenwise/ledger.db"
 
 cat <<EOF
 
 Installed. Hooks take effect in NEW Claude Code sessions.
 
-  see where your tokens go     python3 $HERE/tokenwise/ledger.py report --week
-  what a tool result really costs   python3 $HERE/tokenwise/ledger.py waste --days 7
-  index your repos for /where-is    edit $HERE/repos.txt, then python3 $HERE/tokenwise/whereis.py build
+  see where your tokens go     $PY $HERE/tokenwise/ledger.py report --week
+  what a tool result really costs   $PY $HERE/tokenwise/ledger.py waste --days 7
+  index your repos for /where-is    edit $HERE/repos.txt, then $PY $HERE/tokenwise/whereis.py build
 
   turn every handler off        export TOKENWISE_OFF=1
   remove completely             $HERE/uninstall.sh   (restores from $BACKUP)

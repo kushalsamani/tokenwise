@@ -1,0 +1,5 @@
+# The installer verifies MANIFEST.sha256 against the bytes on disk, so a checkout that rewrote line
+# endings would fail its own integrity check on a fresh clone. Keep the working tree LF on every platform.
+* text=auto eol=lf
+*.png binary
+*.db binary
