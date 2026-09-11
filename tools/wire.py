@@ -88,7 +88,9 @@ def main():
     form = a.form or ('exec' if WINDOWS else 'shell')
     skip = [s.strip() for s in a.skip.split(',') if s.strip()]
 
-    settings = json.load(open(a.settings, encoding='utf-8')) if os.path.exists(a.settings) else {}
+    # utf-8-sig on the way in, utf-8 on the way out: a settings.json written by a PowerShell script, or by any
+    # Windows editor, can carry a byte order mark that plain utf-8 refuses to decode. We tolerate one and drop it.
+    settings = json.load(open(a.settings, encoding='utf-8-sig')) if os.path.exists(a.settings) else {}
     hooks = settings.get('hooks', {})
     wanted = build(os.path.abspath(a.repo), python, form, skip)
 
@@ -123,7 +125,7 @@ def main():
     with open(a.settings, 'w', encoding='utf-8') as fh:
         json.dump(settings, fh, indent=2)
         fh.write('\n')
-    json.load(open(a.settings, encoding='utf-8'))   # fail loudly rather than leave a corrupt settings file
+    json.load(open(a.settings, encoding='utf-8-sig'))   # fail loudly rather than leave a corrupt settings file
     print('    settings.json updated and re-parsed OK')
 
 

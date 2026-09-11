@@ -23,7 +23,7 @@ Copy-Item $Settings "$Settings.bak-tokenwise-uninstall-$(Get-Date -Format 'yyyyM
 $script = @'
 import json, sys
 p = sys.argv[1]
-s = json.load(open(p, encoding="utf-8"))
+s = json.load(open(p, encoding="utf-8-sig"))
 hooks = s.get("hooks", {})
 n = 0
 for ev, groups in list(hooks.items()):
@@ -45,7 +45,7 @@ print(f"removed {n} tokenwise hook group(s)")
 '@
 
 $tmp = Join-Path $env:TEMP "tokenwise-uninstall-$PID.py"
-Set-Content -Path $tmp -Value $script -Encoding utf8
+[System.IO.File]::WriteAllText($tmp, $script)   # no byte order mark; see install.ps1
 try { & $Python $tmp $Settings } finally { Remove-Item $tmp -ErrorAction SilentlyContinue }
 
 foreach ($sk in 'where-is', 'ledger') {

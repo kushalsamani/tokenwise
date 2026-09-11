@@ -79,7 +79,9 @@ Write-Host "    python:   $Python  ($(& $Python --version 2>&1))"
 Write-Host "    settings: $Settings"
 if (-not (Test-Path $Settings)) {
   New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Settings) | Out-Null
-  if (-not $DryRun) { Set-Content -Path $Settings -Value '{}' -Encoding utf8 }
+  # WriteAllText, not Set-Content -Encoding utf8: PowerShell 5.1 writes a byte order mark, and a settings.json
+  # that starts with one cannot be parsed by json.load. On a clean machine that broke the very next step.
+  if (-not $DryRun) { [System.IO.File]::WriteAllText($Settings, '{}') }
   Write-Host '    (created)'
 }
 
