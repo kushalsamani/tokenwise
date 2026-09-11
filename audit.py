@@ -173,7 +173,9 @@ def manifest_lines(root):
     lines = []
     for f in files_to_audit(root):
         h = hashlib.sha256(open(f, 'rb').read()).hexdigest()
-        lines.append(f'{h}  {os.path.relpath(f, root)}')
+        # forward slashes always: a manifest written on Windows must verify on Linux and macOS, and
+        # os.path.relpath would otherwise record tokenwise\hooks\_common.py and match nothing there.
+        lines.append(f'{h}  {os.path.relpath(f, root).replace(os.sep, "/")}')
     for extra in ('install.sh', 'install.ps1', 'uninstall.sh', 'uninstall.ps1', 'audit.py', 'harness/run.sh',
                   'tokenwise/notify.ps1'):
         p = os.path.join(root, extra)

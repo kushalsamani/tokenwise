@@ -84,10 +84,15 @@ if (-not (Test-Path $Settings)) {
 }
 
 $wire = Join-Path $Here 'tools\wire.py'
+# Built as an array, because PowerShell drops an empty string argument entirely: passing `--skip $Skip` with no
+# -Skip given hands wire.py a bare `--skip` and argparse rejects it.
+$wireArgs = @('--settings', $Settings, '--repo', $Here, '--python', $Python)
+if ($Skip) { $wireArgs += @('--skip', $Skip) }
+
 if ($DryRun) {
   Write-Host ''
   Write-Host '==> dry run: the hooks below would be wired, and nothing else would change.'
-  & $Python $wire --settings $Settings --repo $Here --python $Python --skip $Skip --dry-run
+  & $Python $wire @wireArgs --dry-run
   exit 0
 }
 
@@ -99,7 +104,7 @@ Write-Host "    $backup"
 
 Write-Host ''
 Write-Host '==> 4/5  wiring hooks'
-& $Python $wire --settings $Settings --repo $Here --python $Python --skip $Skip
+& $Python $wire @wireArgs
 if ($LASTEXITCODE -ne 0) { Write-Error 'wiring failed; settings.json is unchanged apart from the backup above.'; exit 1 }
 
 Write-Host ''
